@@ -28,6 +28,13 @@ if not is_admin():
 
 
 def get_deadline(id_inventaris:int):
+    """
+        fungsi untuk mendapatkan tanggal pengembalian;
+        - parameters:
+            id_inventaris (int) : id inventararis yang dimaksud;
+        - returns:
+            data_return (str) : tanggal pengembalian jika tidak ada maka None;
+    """
     try:
         data_return = None
         response = requests.get(API_URL, json={"id_inventaris" : id_inventaris})
@@ -52,11 +59,19 @@ def get_deadline(id_inventaris:int):
             with open("data_peminjaman.json", "r") as file:
                 local_data = json.load(file)
                 return local_data["tanggal_pengembalian"]
+
         except FileNotFoundError:
             print("Data peminjaman lokal tidak ditemukan.")
             return None
 
 def get_password(id_inventaris:int):
+    """
+        fungsi untuk mendapatkan password baru untuk lock-screen;
+        - parameters:
+            id_inventaris (int) : id inventararis yang dimaksud;
+        - returns:
+            data_return (str) : password baru jika tidak ada maka None;
+    """
     try:
         data_return = None
         response = requests.get(API_URL, json={"id_inventaris" : id_inventaris})
@@ -86,11 +101,11 @@ def get_password(id_inventaris:int):
             return None
 
 
-# """
-#     kode untuk menjalankan proses lock-screen dan mengubah password
-# """    
+   
 def set_lock_password():
-
+    """
+        kode untuk menjalankan proses lock-screen dan mengubah password
+    """ 
     os.system("rundll32.exe user32.dll,LockWorkStation")
     user_name = "HP"
     new_password = get_password(3)
@@ -101,13 +116,17 @@ def set_lock_password():
 #     kode untuk memunculkan pop-up dialog warning message
 # """
 def show_warning():
-    # Menampilkan MessageBox sebagai peringatan di thread terpisah
+    """Menampilkan MessageBox sebagai peringatan di thread terpisah"""
     ctypes.windll.user32.MessageBoxW(0, "Waktu peminjaman laptop Anda hampir habis. Silakan kembalikan segera untuk menghindari sanksi.", "Peringatan Peminjaman", 1)
 
 # """
 #     kode untuk menintegrasikan semua komponen
 # """
 def main():
+    """
+        fungsi utama untuk menjalakan program ini.
+    """
+    
     id_inventaris = 3
     due_date = get_deadline(id_inventaris)
     logging.debug(due_date)
@@ -121,9 +140,6 @@ def main():
 
             # Tunggu sebentar biar warning muncul, lalu langsung lanjut ke instruksi lock screen
             time.sleep(5)
-            # pyautogui.hotkey('win', 'r')
-            # pyautogui.typewrite("cmd\n")
-            time.sleep(0.5)
             set_lock_password()
             
         else:
