@@ -13,9 +13,11 @@ import logging
 API_URL = "https://konimex.com:447/peminjaman_mis/api_notebook/getInventaris"
 # API_URL = "https://blbqfx2p-80.asse.devtunnels.ms/MonitorLaptop/api/v1/peminjaman/select"
 
+id_inventaris = 1
 
 # """
 #     kode untuk mengakses hak admin (run as administrator)
+#     uncomment saat dijalankan di Task Scheduler     
 # """
 def is_admin():
     try:
@@ -28,6 +30,8 @@ if not is_admin():
     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
     sys.exit()
 
+# nama user PC
+user_name = "HP"
 
 def get_deadline(id_inventaris:int):
     """
@@ -75,21 +79,23 @@ def get_password(id_inventaris:int):
             data_return (str) : password baru jika tidak ada maka None;
     """
     try:
-        data_return = None
+        data_pass_pinjam = None
+        data_pass_kembali = None
         response = requests.get(API_URL, json={"id_inventaris" : id_inventaris})
         if response.status_code == 200:
             data = response.json()
             print(data)
-            if data['password_inventaris'] != None:
-                data_return = data['password_inventaris']
+            if data['password_peminjaman'] != None:
+                data_pass_pinjam = data['password_peminjaman']
+                data_pass_kembali = data['password_pengembalian']
                 #simpan ke json untuk file cadangan
                 with open("data_peminjaman.json", "w") as file:
                     json.dump(data, file)
                     
-                return data_return
+                return data_pass_pinjam, data_pass_kembali
             else:
-                return data_return
-        return data_return    
+                return data_pass_pinjam, data_pass_kembali
+        return data_pass_pinjam, data_pass_kembali    
             
     except Exception as e:
         print(f"Error: {e}")
@@ -97,7 +103,7 @@ def get_password(id_inventaris:int):
         try:
             with open("data_peminjaman.json", "r") as file:
                 local_data = json.load(file)
-                return local_data["password_inventaris"]
+                return local_data["password_peminjaman"], local_data["password_pengembalian"]
         except FileNotFoundError:
             print("Data peminjaman lokal tidak ditemukan.")
             return None
@@ -111,8 +117,13 @@ def set_lock_password():
     os.system("rundll32.exe user32.dll,LockWorkStation")
     #ganti nama user sesuai PC
     #pakai command: >>net user
-    user_name = "HP"
-    new_password = get_password(3)
+    
+    new_password, password_kembali = get_password(id_inventaris)
+    command = f'net user "{user_name}" "{password_kembali}"'
+    subprocess.run(["powershell", "-Command", command], check=True)
+
+def set_password_init():
+    new_password, password_kembali = get_password(id_inventaris)
     command = f'net user "{user_name}" "{new_password}"'
     subprocess.run(["powershell", "-Command", command], check=True)
 
@@ -131,7 +142,7 @@ def main():
         fungsi utama untuk menjalakan program ini.
     """
     
-    id_inventaris = 1
+    
     due_date = get_deadline(id_inventaris)
     logging.debug(due_date)
     print(due_date)
@@ -148,6 +159,7 @@ def main():
             
         else:
             print("Masih dalam batas waktu peminjaman.")
+            set_password_init()
     else:
         print("Gagal mendapatkan batas waktu peminjaman.")
 
