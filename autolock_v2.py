@@ -1,3 +1,34 @@
+"""
+#########################################################
+                        NOTE
+          PROGRAM AUTOLOCK FOR WINDOWS VERSION ONLY
+    RUN IT THROUGH TASK SCHEDULER, AND SET SCHEDULING TIME.
+#########################################################  
+
+CARA SETTING TASK SCHEDULER UNTUK MENJALANKAN PROGRAM INI.
+
+1.) BUKA TASK-SCHEDULER PADA PC, KLIK CREATE TASK PADA PANEL 
+SEBELAH KANAN
+
+2.) PADA KOTAK DIALOG, DI TAB GENERAL BAGIAN BAWAH ATUR CONFIGURE
+FOR KE WINDOWS YANG SESUAI VERSI PC. ATUR JUGA NAME DAN DESCRIPTION 
+AGAR MEMUDAHKAN MEMBEDAKAN DENGAN SERVICE YANG LAIN.
+
+3.) PINDAH KE TAB TRIGGER, ATUR BEGIN THE TASK KE `AT START-UP`,
+PADA BAGIAN ADVANCED SETTINGS, CENTANG `REPEAT TASK EVERY` KEMUDIAN
+SESUAIKAN. ATUR FOR A DURATION OF KE `INDEFINITELY`.
+
+4.) PINDAH KE TAB ACTION, ATUR ACTION KE `START A PROGRAM`, KEMUDIAN 
+PADA BAGIAN SETTINGS PROGRAM/SCRIPT PILIH LOKASI PROGRAM.
+
+5.) PASTIKAN SEMUA SETTINGAN DENGAN BENAR, LALU SIMPAN DENGAN KLIK OK.
+
+6.) APABILA INGIN MEMATIKAN SERVICE INI, BUKA TASK SCHEDULER LALU CARI PADA 
+DAFTAR SERVICE YANG BERJALAN, KLIK KIRI, LALU KLIK DELETE.        
+
+"""
+
+
 import os
 import subprocess
 import json
@@ -11,9 +42,8 @@ import logging
 
 
 API_URL = "https://konimex.com:447/peminjaman_mis/api_notebook/getInventaris"
-# API_URL = "https://blbqfx2p-80.asse.devtunnels.ms/MonitorLaptop/api/v1/peminjaman/select"
 
-id_inventaris = 1
+nomor_inventaris = 1
 
 # """
 #     kode untuk mengakses hak admin (run as administrator)
@@ -26,6 +56,10 @@ def is_admin():
         return False
 
 # Jika script belum dijalankan sebagai admin, maka restart dengan hak admin
+# """
+#     kode untuk mengakses hak admin (run as administrator)
+#     uncomment saat dijalankan di Task Scheduler     
+# """
 if not is_admin():
     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
     sys.exit()
@@ -33,17 +67,17 @@ if not is_admin():
 # nama user PC
 user_name = "HP"
 
-def get_deadline(id_inventaris:int):
+def get_deadline(nomor_inventaris:int):
     """
         fungsi untuk mendapatkan tanggal pengembalian;
         - parameters:
-            id_inventaris (int) : id inventararis yang dimaksud;
+            nomor_inventaris (int) : id inventararis yang dimaksud;
         - returns:
             data_return (str) : tanggal pengembalian jika tidak ada maka None;
     """
     try:
         data_return = None
-        response = requests.get(API_URL, json={"id_inventaris" : id_inventaris})
+        response = requests.get(API_URL, json={"nomor_inventaris" : nomor_inventaris})
         if response.status_code == 200:
             data = response.json()
             print(data)
@@ -70,18 +104,18 @@ def get_deadline(id_inventaris:int):
             print("Data peminjaman lokal tidak ditemukan.")
             return None
 
-def get_password(id_inventaris:int):
+def get_password(nomor_inventaris:int):
     """
         fungsi untuk mendapatkan password baru untuk lock-screen;
         - parameters:
-            id_inventaris (int) : id inventararis yang dimaksud;
+            nomor_inventaris (int) : id inventararis yang dimaksud;
         - returns:
             data_return (str) : password baru jika tidak ada maka None;
     """
     try:
         data_pass_pinjam = None
         data_pass_kembali = None
-        response = requests.get(API_URL, json={"id_inventaris" : id_inventaris})
+        response = requests.get(API_URL, json={"nomor_inventaris" : nomor_inventaris})
         if response.status_code == 200:
             data = response.json()
             print(data)
@@ -118,12 +152,12 @@ def set_lock_password():
     #ganti nama user sesuai PC
     #pakai command: >>net user
     
-    new_password, password_kembali = get_password(id_inventaris)
+    new_password, password_kembali = get_password(nomor_inventaris)
     command = f'net user "{user_name}" "{password_kembali}"'
     subprocess.run(["powershell", "-Command", command], check=True)
 
 def set_password_init():
-    new_password, password_kembali = get_password(id_inventaris)
+    new_password, password_kembali = get_password(nomor_inventaris)
     command = f'net user "{user_name}" "{new_password}"'
     subprocess.run(["powershell", "-Command", command], check=True)
 
@@ -143,7 +177,7 @@ def main():
     """
     
     
-    due_date = get_deadline(id_inventaris)
+    due_date = get_deadline(nomor_inventaris)
     logging.debug(due_date)
     print(due_date)
     if due_date:

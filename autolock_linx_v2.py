@@ -1,7 +1,8 @@
 """
     ##################################################################################
     #                          HARAP BACA NOTE INI DAHULU                            #
-    #################################################################################
+    #                     PROGRAM AUTOLOCK FOR LINUX VERSION ONLY                    #
+    ##################################################################################
     TERDAPAT BEBERAPA CATATAN UNTUK MENJALANKAN PROGRAM INI DENGAN BENAR :
 
     a) PADA KODE UNTUK MENGGANTI PASSWORD DIPERLUKAN ISIAN NAMA USER PC, INI HANYA DAPAT DILAKUKAN
@@ -77,20 +78,20 @@ import logging
 API_URL = "https://konimex.com:447/peminjaman_mis/api_notebook/getInventaris"
 
 # variabel untuk id inventaris/laptop diambil dari databse
-id_inventaris = 1
+nomor_inventaris = 1
 
 
-def get_deadline(id_inventaris:int):
+def get_deadline(nomor_inventaris:int):
     """
         fungsi untuk mendapatkan tanggal pengembalian;
         - parameters:
-            id_inventaris (int) : id inventararis yang dimaksud;
+            nomor_inventaris (int) : id inventararis yang dimaksud;
         - returns:
             data_return (str) : tanggal pengembalian jika tidak ada maka None;
     """
     try:
         data_return = None
-        response = requests.get(API_URL, json={"id_inventaris" : id_inventaris})
+        response = requests.get(API_URL, json={"nomor_inventaris" : nomor_inventaris})
         if response.status_code == 200:
             data = response.json()
             print(data)
@@ -117,19 +118,18 @@ def get_deadline(id_inventaris:int):
             print("Data peminjaman lokal tidak ditemukan.")
             return None
 
-def get_password(id_inventaris:int):
+def get_password(nomor_inventaris:int):
     """
         fungsi untuk mendapatkan password baru untuk lock-screen;
-        - parameters:
-            id_inventaris (int) : id inventararis yang dimaksud;
-        - returns:
-            passwd_pinjam (str) : password baru jika tidak ada maka None;
-            passwd_kembali (str) : password untuk pengembalian / reset
+        
+        :param nomor_inventaris (int): id inventararis yang dimaksud; 
+        :return passwd_pinjam (str): password baru jika tidak ada maka None;
+        :return passwd_kembali (str): password untuk pengembalian / reset
     """
     try:
         passwd_pinjam = None
         passwd_kembali = None
-        response = requests.get(API_URL, json={"id_inventaris" : id_inventaris})
+        response = requests.get(API_URL, json={"nomor_inventaris" : nomor_inventaris})
         if response.status_code == 200:
             data = response.json()
             print(data)
@@ -163,7 +163,10 @@ def set_crontab_variable():
         kode untuk set variabel pengaturan untuk xscreensaver pada Crontab
         untuk memberikan permission pada crontab untuk dapat mengakses display.
     """
+    
+    #mengatur agar menggunakan display ke-0
     os.environ["DISPLAY"] = ":0"
+    #mencari key session untuk authority xscreensaver dengan pola (xauth_...)
     cm_find = "find /run/user/1000/ -type f -name 'xauth_*' 2>/dev/null | head -n 1"
     try:
         path_xauth = subprocess.check_output(
@@ -191,15 +194,19 @@ def set_password_init():
     """
         Fungsi untuk set password saat masa peminjaman berlaku.
     """
-    new_password, pass_kembali = get_password(id_inventaris)
+    new_password, pass_kembali = get_password(nomor_inventaris)
+    user_pc = "user"
     if new_password:
         print(f"password init : {new_password}")
         # kode ini berdasarkan command echo "nama user di PC:password baru" | sudo chpasswd
-        command = f'echo "user:{new_password}" | sudo chpasswd'
+        command = f'echo "{user_pc}:{new_password}" | sudo chpasswd'
         subprocess.run(command, shell=True, check=True)
 
 
 def set_lock_password():
+    """
+    Fungsi untuk menjalankan lock-screen dan mengganti password;
+    """
     # jika OS pakai Gnome uncomment kode di bawah.
     # os.system("gnome-screensaver-command --lock")
 
@@ -213,14 +220,15 @@ def set_lock_password():
     # kode user_name ini hanya akan berjalan ketika dieksekusi di terminal secara manual,
     # jika dijalankan pada Crontab akan mengambil user secara keseluruhan atau root;
     # maka dari itu nilai variabel `user_name` TIDAK DIPAKAI pada Crontab.
-    user_name = os.environ.get("USER")
-    print(user_name)
-
+    # user_name = os.environ.get("USER")
+    # print(user_name)
+    
+    user_pc = "user"
     #mendaptkan password baru dari server
-    new_pass, password_kembali = get_password(id_inventaris)
+    new_pass, password_kembali = get_password(nomor_inventaris)
     if password_kembali:
         # kode ini berdasarkan command echo "nama user di PC:password baru" | sudo chpasswd
-        command = f'echo "user:{password_kembali}" | sudo chpasswd'
+        command = f'echo "{user_pc}:{password_kembali}" | sudo chpasswd'
         subprocess.run(command, shell=True, check=True)
         print(f"ini yaa : {password_kembali}")
 
@@ -243,7 +251,7 @@ def main():
     # screen_saver_thread.start()
 
     # mendapatkan data tanggal pengembalian dari server.
-    due_date = get_deadline(id_inventaris)
+    due_date = get_deadline(nomor_inventaris)
     logging.debug(due_date)
     print(due_date)
 

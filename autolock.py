@@ -69,10 +69,9 @@ def get_deadline(id_inventaris:int):
 def get_password(id_inventaris:int):
     """
         fungsi untuk mendapatkan password baru untuk lock-screen;
-        - parameters:
-            id_inventaris (int) : id inventararis yang dimaksud;
-        - returns:
-            data_return (str) : password baru jika tidak ada maka None;
+        
+        :param id_inventaris (int): id inventararis yang dimaksud;
+        :returns data_return (str): password baru jika tidak ada maka None;
     """
     try:
         data_return = None
